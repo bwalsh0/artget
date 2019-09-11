@@ -1,7 +1,10 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+# Forked by bwalsh0 (https://github.com/bwalsh0)
+#
 # Copyright (c) 2014, Berk Özbalcı
 # All rights reserved.
+# 
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
 # 
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -42,12 +45,12 @@ class Fetcher:
    def __init__(self, artist, album, size, path, autocorrect):
       self.size = size
       self.path = path
-      self.payload = { 'api_key': API_KEY, 'artist': artist, 'album': album,
-            'autocorrect': int(autocorrect), 'format': 'json' }
+      self.payload = { 'api_key': API_KEY, 'artist': artist, 'track': album,
+            'autocorrect': 1, 'format': 'json' }
 
    def find_album(self):
       try:
-         r = requests.get(API_URL + '/2.0/?method=album.getinfo', params=self.payload)
+         r = requests.get(API_URL + '/2.0/?method=track.getInfo', params=self.payload)
       except (requests.ConnectionError, requests.Timeout) as e:
          raise ArtgetError("There was an error making a request to Last.fm: %s" %
                e)
@@ -55,10 +58,12 @@ class Fetcher:
       albuminfo = r.json()
 
       try:
-         albuminfo['album']
+         albuminfo['track']
+         # print(albuminfo['track'])
       except KeyError:
          raise ArtgetError("This album doesn't seem to exist on Last.fm")
-      self.albuminfo = albuminfo['album']
+      self.albuminfo = albuminfo['track']['album']
+      # print(albuminfo['title'])
 
    def find_image(self):
       try:
@@ -67,6 +72,7 @@ class Fetcher:
          raise ArtgetError("The album hasn't been found yet.")
 
       images = self.albuminfo['image']
+      print(images)
       count = len(images)
 
       if count == 0:
@@ -208,17 +214,14 @@ def parse_args():
    parser.add_argument('-t', action='store_true', dest='tomusicdir',
          help='save album art to the music directory')
 
-   parser.set_defaults(size=4, output='cover.jpg', host='localhost', port=6600,
+   parser.set_defaults(size=6, output='cover.png', host='localhost', port=6600,
          root='~/music/')
    args = parser.parse_args()
    return args
 
 def main():
    args = parse_args()
-
-   # This is to be played around with.
-   output = args.output
-
+   
    # Check if both --artist and --album exists
    if (args.artist and not args.album) or (args.album and not args.artist):
       raise ArtgetError("Both artist and album must be specified")
@@ -227,6 +230,8 @@ def main():
    if (args.artist and args.album):
       artist = args.artist
       album = args.album
+      
+      output = r'artget_out\\' + artist.lower().replace(' ', '_') + '_' + album.lower().replace(' ', '_') + '.png'
 
       # Assume the ideal organisation of the music directory and place the
       # downloaded art there. This is especially useful for people who use
